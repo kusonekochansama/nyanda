@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+ 
+<html lang="ja" xml:lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>にゃんだるゲーム工場</title>
+<meta name="keywords" content="自作ゲーム" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" />
+ 
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1420985564599583"
+     crossorigin="anonymous"></script>
+
+<link rel="stylesheet" href="//use.fontawesome.com/releases/v5.7.0/css/all.css" crossorigin="anonymous" />
+ 
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/slick-carousel@1/slick/slick.min.css" />
+ 
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/slick-carousel@1/slick/slick-theme.min.css" />
+<script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+<script src="//cdn.jsdelivr.net/npm/slick-carousel@1/slick/slick.min.js"></script>
+<style>
+        /*ページ全体の構成*/
+        body{
+            background: #fff;
+            color: #444444;
+            font-size: 16px;
+            font-family: 'メイリオ', Meiryo, 'ヒラギノ角ゴ Pro W3', 'Hiragino Kaku Gothic Pro', Helvetica, Arial, 'ＭＳ Ｐゴシック', sans-serif;
+            line-height: 1.42857;
+            margin: 0;
+        }
+        a:link {
+            text-decoration: none;
+        }
+        a:hover {
+            color: #999;
+            text-decoration: none;
+        }
+        a:visited {
+            color: #999;
+            text-decoration: none;
+        }
+        /* ヘッダー */
+        .header {
+            z-index: 100;
+            padding: 24px 0;
+            width: 100%;
+            border-bottom: #ccd1d9 solid 1px;
+            background: #64646c;
+            color: #333;
+        }
+        .header-group{
+            max-width: 960px;
+            height: auto;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .header-groupTitle {
+            color:#fff;
+            margin: 0;
+            font-size: 2.4em;
+            padding-right: 20px;
+        }
+        .header-groupDescription {
+            color: #fff;
+        }
+        /*画面サイズ960px以下のヘッダースタイル*/
+        @media screen and (max-width : 960px){
+            .header{
+                padding: 24px 0px;
+            }
+            .header-groupTitle,
+            .header-groupDescription{
+                margin-left: 20px;
+            }
+        }
+        /* ナビゲーション */
+        .section-nav {
+            max-width: 960px;
+            height: auto;
+            margin: 0 auto;
+            padding: 21px 0 0;
+            background: #fff;
+            text-align: center;
+        }
+        .section-navGroup {
+            display: flex;
+            justify-content: space-around;
+            padding: 0;
+        }
+        .section-navGroup > li {
+            list-style-type: none;
+        }
+        .section-navGroup > li a {
+            display: block;
+            padding: 6px 12px;
+            color: #333;
+            text-decoration: none;
+        }
+        .section-navGroup > li a:hover {
+            color: #999;
+        }
+        .section-navGroup > li a.active {
+            border-bottom: #333 solid 2px;
+            color: #999;
+        }
+        /*画面サイズ600px以下のナビスタイル*/
+        @media screen and (max-width :960px){
+            .section-navGroup{
+                margin: 0 auto;
+                padding: 0 20px;
+                display: flex;
+                flex-wrap: wrap;
+                flex-direction: row;
+                text-align: center;
+            }
+            .section-navGroup > li{
+                border: 1px solid #ccc;
+                margin-bottom: 5px;
+                min-width: 100%;
+                list-style-type: none;
+            }
+        }
+        /*　スライドイメージ */
+        .mainImg{
+            margin-bottom: 80px;
+        }
+        /*スライドイメージ > スライダーの設定*/
+        .slider{
+        margin: 0 auto 80px;
+        padding: 0;
+        max-width: 960px;
+        height: auto;
+        }
+        .slider img{
+            height: 500px;
+            width: 100%;
+            object-fit: cover;
+            font-family: 'object-fit: cover;'; /*IE対策*/
+        }
+        .slick-initialized,
+        .slick-slide{
+            max-height: 500px !important;
+        }
+        .slick-next,
+        .slick-prev{
+            display: none !important;
+        }
+        /*スライダー両サイドの矢印*/
+        .slick-prev:before,
+        .slick-next:before {
+            color: #64646c;
+        }
+        /*画面サイズ600px以下のスライダースタイル*/
+        @media screen and (max-width : 960px){
+            .section{
+                display: flex;
+                flex-direction: column-reverse;
+            }
+            .mainImg{
+                margin-bottom:0 ;
+            }
+            .slider img{
+                height: 280px;
+                width: 100%;
+                object-fit: cover;
+                font-family: 'object-fit: cover;'; /*IE対策*/
+            }
+        }
+        /*メインコンテンツ*/
+        .article {
+            max-width: 960px;
+            height: auto;
+            margin: 50px auto;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        .article-group {
+            width: 31%;
+            margin: 20px 0;
+            height: auto;
+        }
+        .article-group > a{
+            color: #333333;
+        }
+        .article-group > a :hover{
+            color: #999;
+        }
+        /*メインコンテンツのイメージ*/
+        .article-groupImg{
+            width: 100%;
+        }
+        /*メインコンテンツのタイトル部分*/
+        .article-groupTitle {
+            margin: 10px 0;
+            padding: 10px 0;
+            border-bottom: 1px dotted #444;
+            text-align: center;
+            font-weight: bold;
+        }
+        /*960px以下の画面の中間概要部分のスタイル*/
+        @media screen and (max-width :960px){
+            .article{
+                margin: 0 auto;
+                padding: 0 20px;
+            }
+            .article-group{
+                width: 100%;
+                height:auto;
+            }
+            .article-groupDiscription{
+                text-align: center;
+            }
+        }
+        /*更新情報*/
+        .news {
+            max-width: 960px;
+            margin: 0 auto 50px;
+        }
+        .news-list {
+            list-style: none;
+            padding: 0;
+        }
+        .news-list > li {
+            margin: 10px 0;
+            padding: 10px 0;
+            border-bottom: 1px dotted #444;
+        }
+        .news-list > li > a{
+            color: #333333;
+        }
+        /*960px以下の画面の中間概要部分のスタイル*/
+        @media(max-width: 960px){
+            .news{
+                padding: 20px;
+            }
+        }
+        /*更新年月日*/
+        .news-listDate {
+            color: #c5c5c5;
+            margin-right: 20px;
+        }
+        /*自己紹介*/
+        .profile{
+            background: #f2f2f2;
+            padding-bottom: 35px;
+            border-bottom: 1px solid #919191;
+        }
+        .profile-wrap{
+            max-width:960px;
+            margin: 0 auto;
+        }
+        .profile-wrapGroup{
+            width: 100%;
+            margin: 0 auto;
+            padding: 50px 0 10px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        /*自己紹介－画像部分*/
+        .profile-wrapGroupImg{
+            width: 20%;
+        }
+        .profile-wrapGroupImg > img{
+            border-radius: 50%;
+            width: 180px;
+            height: 180px;
+            object-fit: cover;
+            font-family: 'object-fit: cover;'; /*IE対策*/
+        }
+        /*自己紹介-本文*/
+        .profile-wrapGroupBody{
+            background: #fff;
+            border-radius: 15px;
+            max-width: 65%;
+            padding: 10px 30px 20px;
+            margin-bottom: 20px;
+        }
+        .profile-wrapGroupBody-name{
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-bottom: 1px solid #f2f2f2;
+            padding-bottom: 10px;
+        }
+        @media(max-width: 960px){
+            .profile{
+                padding-bottom: 0;
+            }
+            .profile-wrapGroup{
+                display: block
+            }
+            .profile-wrapGroupImg{
+                width: 50%;
+                margin: 0 auto 20px;
+                text-align: center;
+            }
+            .profile-wrapGroupBody{
+                width: 80%;
+                margin: 0 auto 20px;
+            }
+        }
+        /*SNSボタン*/
+        .profile-wrapGroupSNSicon{
+            max-width: 960px;
+            margin-left: auto;
+        }
+        .profile-wrapGroupSNSicon-group{
+            list-style: none;
+            display: flex;
+            justify-content: flex-end;
+            margin: 0;
+            padding: 0;
+        }
+        /*SNSボタン-色サイズ*/
+        .snsIcon{
+            width: 48px;
+            margin: 0 0 0 10px;
+        }
+        @media(max-width: 960px){
+            .profile-wrapGroupSNSicon{
+                margin: 0 auto;
+                padding: 20px;
+            }
+            .profile-wrapGroupSNSicon-group{
+                justify-content: center;
+            }
+        }
+        /*注釈権利*/
+        .footer{
+            background: #f2f2f2;
+            text-align: center;
+            padding: 20px 0;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+<div class="header-group">
+<h1 class="header-groupTitle">にゃんだるゲーム工場</h1>
+<p class="header-groupDescription">自作ゲーム置き場です。</p>
+</div>
+</div>
+<div class="section">
+<div class="section-nav">
+<ul class="section-navGroup">
+<li><a href="#">home</a></li>
+<li><a href="#">section1</a></li>
+<li><a href="#">section2</a></li>
+<li><a href="#">section3</a></li>
+</ul>
+</div>
+<div class="mainImg">
+<ul class="slider">
+<li><a href="https://kusonekochan.web.fc2.com/shinoalisuika/shinoalisuika.html" title="しのありすいか"><img src="https://kusonekochan.web.fc2.com/shinoalisuika.png" alt="image01" width="854" height="280" /></a></li>
+<li><a href="#"><img src="//web.fc2.com/fc2img/designtemplates/common/img_960-500.png" alt="image01" /></a></li>
+<li><a href="#"><img src="//web.fc2.com/fc2img/designtemplates/common/img_960-500.png" alt="image01" /></a></li>
+</ul>
+</div>
+</div>
+<div class="article">
+<div class="article-group"><a href="#"> <img class="article-groupImg" src="//web.fc2.com/fc2img/designtemplates/common/img_300-200.png" alt="記事の写真" /></a>
+<p class="article-groupTitle">section title</p>
+<div class="article-groupDiscription">記事の内容が入ります。このコメントはサンプルです。</div>
+</div>
+<div class="article-group"><a href="#"> <img class="article-groupImg" src="//web.fc2.com/fc2img/designtemplates/common/img_300-200.png" alt="記事の写真" /></a>
+<p class="article-groupTitle">section title</p>
+<div class="article-groupDiscription">記事の内容が入ります。このコメントはサンプルです。</div>
+</div>
+<div class="article-group"><a href="#"> <img class="article-groupImg" src="//web.fc2.com/fc2img/designtemplates/common/img_300-200.png" alt="記事の写真" /></a>
+<p class="article-groupTitle">section title</p>
+<div class="article-groupDiscription">記事の内容が入ります。このコメントはサンプルです。</div>
+</div>
+</div>
+<div class="news">
+<h2 class="news-title">更新情報</h2>
+<ul class="news-list">
+<li><a href="#"><span class="news-listDate">2024年05月19日</span>しのありすいか更新</a></li>
+<li><a href="#"><span class="news-listDate">20xx年xx月xx日</span>更新情報が入ります。</a></li>
+<li><a href="#"><span class="news-listDate">20xx年xx月xx日</span>更新情報が入ります。</a></li>
+<li><a href="#"><span class="news-listDate">20xx年xx月xx日</span>更新情報が入ります。</a></li>
+</ul>
+</div>
+<div class="profile">
+<div class="profile-wrap">
+<div class="profile-wrapGroup">
+<div class="profile-wrapGroupImg"><img src="https://kusonekochan.web.fc2.com/kusonekochan.jpg" alt="" width="180" height="180" /></div>
+<div class="profile-wrapGroupBody">
+<p class="profile-wrapGroupBody-name">くそねこぷれい配信猫ちゃん(にゃんだる)</p>
+<div class="profile-wrapGroupBody-discription">誤字のプロ　くそプレイ配信猫ちゃんが<br />自作したゲームを置いておく場所です。<br />お手軽なゲームが遊べます。</div>
+</div>
+<div class="profile-wrapGroupSNSicon">
+<ul class="profile-wrapGroupSNSicon-group">
+<li><a href="#"><img src="//web.fc2.com/fc2img/designtemplates/common/icon-tw.svg" class="snsIcon" alt="Twitter" /></a></li>
+<li><a href="#"><img src="//web.fc2.com/fc2img/designtemplates/common/icon-ig.svg" class="snsIcon" alt="Instagram" /></a></li>
+<li><a href="#"><img src="//web.fc2.com/fc2img/designtemplates/common/icon-fb.svg" class="snsIcon" alt="facebook" /></a></li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="footer">
+<div class="footer-text">ホームページに関する注意事項など入ります</div>
+<div class="footer-copyright">Copyright &copy; 2024 05</div>
+</div>
+<!--スライダー-->
+<p>
+<script>
+    $('.slider').slick({
+        autoplay:true,
+        autoplaySpeed:8000,
+        dots:true,
+    });
+    </script>
+</p>
+<!--objedt-fit（IE対策）-->
+<p>
+<script src="//cdnjs.cloudflare.com/ajax/libs/object-fit-images/3.2.3/ofi.js"></script>
+<script>objectFitImages();</script>
+</p>
+</body>
+</html>

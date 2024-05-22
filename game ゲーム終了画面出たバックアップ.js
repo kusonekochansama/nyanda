@@ -1,4 +1,4 @@
-const { Engine, Render, Runner, World, Bodies, Body, Events } = Matter;
+const { Engine, Render, Runner, World, Bodies, Events } = Matter;
 
 const MAX_SCREEN_WIDTH = 540;
 const INIT_SCREEN_HEIGHT = 960;
@@ -61,11 +61,7 @@ const resizeCanvas = () => {
     canvas.width = screenWidth;
     canvas.height = screenHeight;
     const ctx = canvas.getContext('2d');
-    if (isGameOver && gameOverBackgroundImg) {
-        drawBackground(ctx, gameOverBackgroundImg);
-    } else if (backgroundImg) {
-        drawBackground(ctx, backgroundImg);
-    }
+    drawBackground(ctx, isGameOver ? gameOverBackgroundImg : backgroundImg);
     log('Canvas resized', screenWidth, screenHeight);
 };
 
@@ -269,7 +265,7 @@ const drawScore = (ctx, score, x, y) => {
 };
 
 const drawHighScores = (ctx, scores, x, y) => {
-    ctx.fillStyle = 'white'; // ハイスコアのテキストを白にする
+    ctx.fillStyle = 'black'; // スコアランキングのテキストを黒にする
     ctx.font = '24px sans-serif'; // フォントサイズを調整
     ctx.fillText('スコアランキング', x, y);
     scores.forEach((score, index) => {
@@ -297,50 +293,12 @@ const saveHighScore = (score) => {
     log('High scores saved:', highScores);
 };
 
-const drawGameOver = (ctx) => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    log('Drawing game over background');
-    if (gameOverBackgroundImg) {
-        ctx.drawImage(gameOverBackgroundImg, 0, 0, canvas.width, canvas.height);
-        log('Game over background drawn');
-    } else {
-        log('Game over background image not loaded');
-    }
-    drawHighScores(ctx, highScores, 10, 50); // スコアランキングを描画
-    ctx.fillStyle = 'black'; // スコア表示用のスタイル設定
-    ctx.font = '48px sans-serif';
-    ctx.fillText('今回のスコア  ' + score.toFixed(5), 10, 350); // 今回のスコアを表示
-    drawRestartButton(ctx);
-};
+// ゲームオーバーのスコア表示と再スタートボタン描画を一時的に無効化
+const drawGameOverScore = (ctx) => {};
 
-const drawRestartButton = (ctx) => {
-    const buttonWidth = 300;
-    const buttonHeight = 100;
-    const buttonX = (canvas.width - buttonWidth) / 2;
-    const buttonY = canvas.height - buttonHeight - 20;
-    
-    ctx.fillStyle = 'white';
-    ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
-    
-    ctx.fillStyle = 'black';
-    ctx.font = '36px sans-serif';
-    ctx.fillText('ゲームリスタート', buttonX + 20, buttonY + 60);
-    
-    canvas.addEventListener('click', function handleRestartClick(event) {
-        const rect = canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        
-        if (x >= buttonX && x <= buttonX + buttonWidth && y >= buttonY && y <= buttonY + buttonHeight) {
-            resetGame();
-            runner.enabled = true;
-            isGameOver = false;
-            requestAnimationFrame(mainLoop);
-            log('Game restarted');
-            canvas.removeEventListener('click', handleRestartClick);
-        }
-    });
-};
+const drawRestartButton = (ctx) => {};
+
+const drawStartImage = (ctx) => {};
 
 const gameOver = () => {
     if (isGameOver) return; // すでにゲームオーバーなら何もしない
@@ -350,10 +308,7 @@ const gameOver = () => {
 
     saveHighScore(score); // ハイスコアを保存
 
-    // 描画を停止し、ゲームオーバー画面を表示する
-    const ctx = canvas.getContext('2d');
-    drawGameOver(ctx);
-
+    // ゲームオーバー時にも描画を続けるため、メインループを終了しない
     log('Game over');
 };
 
@@ -361,46 +316,42 @@ const mainLoop = () => {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (isGameOver) {
-        drawGameOver(ctx);
-        log('Main loop stopped'); // ループが停止したことをログに記録
-        return; // ゲームオーバー時にループを停止
+    drawBackground(ctx, isGameOver ? gameOverBackgroundImg : backgroundImg);
+
+    if (!isGameOver) {
+        // 座標変換のスケーリング係数を計算
+        const scaleX = canvas.width / MAX_SCREEN_WIDTH;
+        const scaleY = canvas.height / INIT_SCREEN_HEIGHT;
+
+        // ボールを描画
+        balls.forEach(ball => {
+            const posX = ball.position.x * scaleX;
+            const posY = ball.position.y * scaleY;
+            const radius = ball.circleRadius * scaleX; // スケールを適用
+            const img = ballImages[ball.circleRadius];
+            if (img) {
+                ctx.save();
+                ctx.translate(posX, posY);
+                ctx.rotate(ball.angle); // ボールの回転角度を適用
+                ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
+                ctx.restore();
+            }
+        });
+
+        // スコアを左上に描画
+        drawScore(ctx, score, 10, 15);
+
+        // プレイ時間を左上に描画（スコアの下）
+        const currentTime = Date.now();
+        const timeElapsed = currentTime - startTime;
+        drawTime(ctx, timeElapsed, 10, 60);
+
+        // スコアランキングをスコアと時間の下に描画
+        drawHighScores(ctx, highScores, 10, 90); // スコアランキングの表示位置を調整
+
+        // 次に出現するボールを描画
+        drawNextBall(ctx);
     }
-
-    drawBackground(ctx, backgroundImg);
-
-    // 座標変換のスケーリング係数を計算
-    const scaleX = canvas.width / MAX_SCREEN_WIDTH;
-    const scaleY = canvas.height / INIT_SCREEN_HEIGHT;
-
-    // ボールを描画
-    balls.forEach(ball => {
-        const posX = ball.position.x * scaleX;
-        const posY = ball.position.y * scaleY;
-        const radius = ball.circleRadius * scaleX; // スケールを適用
-        const img = ballImages[ball.circleRadius];
-        if (img) {
-            ctx.save();
-            ctx.translate(posX, posY);
-            ctx.rotate(ball.angle); // ボールの回転角度を適用
-            ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
-            ctx.restore();
-        }
-    });
-
-    // スコアを左上に描画
-    drawScore(ctx, score, 10, 15);
-
-    // プレイ時間を左上に描画（スコアの下）
-    const currentTime = Date.now();
-    const timeElapsed = currentTime - startTime;
-    drawTime(ctx, timeElapsed, 10, 60);
-
-    // スコアランキングをスコアと時間の下に描画
-    drawHighScores(ctx, highScores, 10, 90); // スコアランキングの表示位置を調整
-
-    // 次に出現するボールを描画
-    drawNextBall(ctx);
 
     requestAnimationFrame(mainLoop);
     log('Main loop running');
@@ -424,7 +375,7 @@ canvas.focus();
 
 Promise.all([
     loadImage('bg/0001.jpg').then(img => { backgroundImg = img; }),
-    loadImage('bg/0002.jpg').then(img => { gameOverBackgroundImg = img; }).catch(err => log(`Error loading game over background image: ${err.message}`)) // エラーハンドリングを追加
+    loadImage('bg/0002.jpg').then(img => { gameOverBackgroundImg = img; }).catch(err => log(`Error loading game over background image: ${err.message}`))
 ]).then(() => {
     return Promise.all(BALL_TYPES.map(type => loadImage(type.image)));
 }).then(images => {

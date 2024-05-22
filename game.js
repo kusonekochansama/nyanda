@@ -1,4 +1,4 @@
-const { Engine, Render, Runner, World, Bodies, Body, Events } = Matter;
+const { Engine, Render, Runner, World, Bodies, Events } = Matter;
 
 const MAX_SCREEN_WIDTH = 540;
 const INIT_SCREEN_HEIGHT = 960;
@@ -21,16 +21,18 @@ let score = 0;
 let comboCount = 0;
 const COMBO_BONUS = [1, 1, 2, 3, 4, 5];
 let nextBallType = BALL_TYPES[0];
-let highScores = JSON.parse(localStorage.getItem('highScores')) || []; // ローカルストレージからハイスコアを読み込む
-let backgroundImg = null; // 通常時の背景画像
-let gameOverBackgroundImg = null; // ゲームオーバー時の背景画像
-let scoreImages = {}; // スコア数字の画像
-let lastBallTime = 0; // ボールが最後に出現した時刻
-let isGameOver = false; // ゲームオーバー状態を追跡
+let highScores = [];
+let backgroundImg = null;
+let gameOverBackgroundImg = null;
+let scoreImages = {};
+let lastBallTime = 0;
+let isGameOver = false;
+let comboSounds = {};
+let startTime = null;
+let elapsedTime = 0;
 
-let comboSounds = {}; // コンボ効果音
-let startTime = null; // ゲーム開始時刻
-let elapsedTime = 0; // 経過時間
+let bgmAudio = null;
+let isBgmPlayed = false; // BGMが再生されたかどうかを追跡
 
 const canvas = document.getElementById('gameCanvas');
 const engine = Engine.create();
@@ -42,7 +44,7 @@ const render = Render.create({
         width: window.innerWidth > MAX_SCREEN_WIDTH ? MAX_SCREEN_WIDTH : window.innerWidth,
         height: window.innerWidth > MAX_SCREEN_WIDTH ? (window.innerHeight / window.innerWidth) * MAX_SCREEN_WIDTH : window.innerHeight,
         wireframes: false,
-        background: 'transparent' // 背景を透明に設定
+        background: 'transparent'
     }
 });
 
@@ -50,7 +52,6 @@ Render.run(render);
 const runner = Runner.create();
 Runner.run(runner, engine);
 
-// ログをコンソールに出力
 const log = (...messages) => {
     console.log(...messages);
 };
@@ -61,11 +62,7 @@ const resizeCanvas = () => {
     canvas.width = screenWidth;
     canvas.height = screenHeight;
     const ctx = canvas.getContext('2d');
-    if (isGameOver && gameOverBackgroundImg) {
-        drawBackground(ctx, gameOverBackgroundImg);
-    } else if (backgroundImg) {
-        drawBackground(ctx, backgroundImg);
-    }
+    drawBackground(ctx, isGameOver ? gameOverBackgroundImg : backgroundImg);
     log('Canvas resized', screenWidth, screenHeight);
 };
 
@@ -76,7 +73,7 @@ const loadImage = (src) => {
         const img = new Image();
         img.src = src;
         img.onload = () => {
-            log(`Image loaded: ${src}`); // 画像が正しくロードされたことをログに記録
+            log(`Image loaded: ${src}`);
             resolve(img);
         };
         img.onerror = (err) => {
@@ -105,7 +102,6 @@ Promise.all(BALL_TYPES.map(type => loadImage(type.image)))
         log("Failed to load images:", err);
     });
 
-// スコア画像のロード
 for (let i = 0; i <= 9; i++) {
     const filename = `count/${i.toString().padStart(2, '0')}.png`;
     loadImage(filename)
@@ -117,13 +113,13 @@ for (let i = 0; i <= 9; i++) {
         });
 }
 
-// 効果音のロード
 Promise.all([
     loadAudio('sound/001.mp3').then(audio => { comboSounds[1] = audio; }),
     loadAudio('sound/002.mp3').then(audio => { comboSounds[2] = audio; }),
     loadAudio('sound/003.mp3').then(audio => { comboSounds[3] = audio; }),
     loadAudio('sound/004.mp3').then(audio => { comboSounds[4] = audio; }),
-    loadAudio('sound/005.mp3').then(audio => { comboSounds[5] = audio; })
+    loadAudio('sound/005.mp3').then(audio => { comboSounds[5] = audio; }),
+    loadAudio('sound/000.mp3').then(audio => { bgmAudio = audio; bgmAudio.volume = 0.2; }) // BGMのロードとデフォルト音量の設定
 ]).catch(err => {
     log(err);
 });
@@ -170,7 +166,6 @@ const handleCollision = (event) => {
                 const newBallType = BALL_TYPES[index + 1];
                 const newBall = createBall(bodyA.position.x, bodyA.position.y, newBallType.radius, ballImages[newBallType.radius]);
                 balls.push(newBall);
-                // 効果音を再生
                 const comboSound = comboSounds[Math.min(comboCount, 5)];
                 if (comboSound) {
                     comboSound.play();
@@ -182,7 +177,6 @@ const handleCollision = (event) => {
                 balls = balls.filter(ball => ball !== bodyA && ball !== bodyB);
                 comboCount += 1;
                 increaseScore(100, comboCount);
-                // 効果音を再生
                 const comboSound = comboSounds[Math.min(comboCount, 5)];
                 if (comboSound) {
                     comboSound.play();
@@ -201,10 +195,11 @@ const resetGame = () => {
     balls = [];
     score = 0;
     comboCount = 0;
-    lastBallTime = 0; // ボールが最後に出現した時刻をリセット
-    isGameOver = false; // ゲームオーバー状態をリセット
-    startTime = Date.now(); // ゲーム開始時刻を設定
-    elapsedTime = 0; // 経過時間をリセット
+    lastBallTime = 0;
+    isGameOver = false;
+    startTime = Date.now();
+    elapsedTime = 0;
+    isBgmPlayed = false; // BGMフラグをリセット
     log('Game reset');
 
     const floor = Bodies.rectangle(MAX_SCREEN_WIDTH / 2, INIT_SCREEN_HEIGHT - 25, MAX_SCREEN_WIDTH, 50, { isStatic: true });
@@ -214,6 +209,19 @@ const resetGame = () => {
 
     nextBallType = BALL_TYPES[0];
     log('Walls and floor created');
+
+    if (bgmAudio) {
+        bgmAudio.currentTime = 0;
+        bgmAudio.volume = 0.2; // デフォルトの音量を設定
+        bgmAudio.loop = true;
+    }
+};
+
+const playBGM = () => {
+    if (bgmAudio && !isBgmPlayed) {
+        bgmAudio.play();
+        isBgmPlayed = true;
+    }
 };
 
 const drawBackground = (ctx, img) => {
@@ -232,174 +240,44 @@ const formatTime = (milliseconds) => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
-const drawTime = (ctx, time, x, y) => {
+const drawTime = (ctx, time) => {
+    const x = canvas.width / 2;
+    const y = 30;
     ctx.fillStyle = 'white';
     ctx.font = '24px sans-serif';
+    ctx.textAlign = 'center';
     ctx.fillText(`Time: ${formatTime(time)}`, x, y);
     log('Time drawn:', formatTime(time));
 };
 
+const getCanvasMousePosition = (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (event.clientX - rect.left) * scaleX;
+    const y = (event.clientY - rect.top) * scaleY;
+    return { x, y };
+};
+
 document.addEventListener('mousedown', (event) => {
-    if (isGameOver) return; // ゲームオーバー時はボールを生成しない
+    playBGM();
+    if (isGameOver) return;
     const currentTime = Date.now();
-    if (currentTime - lastBallTime >= 1000) { // 1秒以上経過しているか確認
-        const x = event.clientX;
-        if (ballImages[nextBallType.radius]) { // 画像がロードされていることを確認
+    if (currentTime - lastBallTime >= 1000) {
+        const { x } = getCanvasMousePosition(event);
+        if (ballImages[nextBallType.radius]) {
             const newBall = createBall(x, 50, nextBallType.radius, ballImages[nextBallType.radius]);
             balls.push(newBall);
             nextBallType = BALL_TYPES[Math.floor(Math.random() * BALL_TYPES.length)];
             comboCount = 0;
-            lastBallTime = currentTime; // 最後にボールを出現させた時刻を更新
+            lastBallTime = currentTime;
             log('New ball created on mouse click');
         }
     }
 });
 
-const drawScore = (ctx, score, x, y) => {
-    const scoreStr = score.toString();
-    for (let char of scoreStr) {
-        const digit = parseInt(char);
-        const img = scoreImages[digit];
-        if (img) {
-            ctx.drawImage(img, x, y, img.width, img.height);
-            x += img.width + 5; // 次の数字の位置を調整
-        }
-    }
-    log('Score drawn:', score);
-};
-
-const drawHighScores = (ctx, scores, x, y) => {
-    ctx.fillStyle = 'black'; // スコアランキングのテキストを黒にする
-    ctx.font = '24px sans-serif'; // フォントサイズを調整
-    ctx.fillText('スコアランキング', x, y);
-    scores.forEach((score, index) => {
-        ctx.fillText(`${index + 1}. ${score.toFixed(4)}`, x, y + 30 + index * 30); // 行間を調整
-    });
-    log('High scores drawn:', scores);
-};
-
-const drawNextBall = (ctx) => {
-    if (ballImages[nextBallType.radius]) {
-        const x = 450; // 次のボールの位置（調整可能）
-        const y = 100; // 次のボールの位置（調整可能）
-        const radius = nextBallType.radius;
-        const img = ballImages[nextBallType.radius];
-        ctx.drawImage(img, x - radius, y - radius, radius * 2, radius * 2); // 次のボールを描画
-        log('Next ball drawn:', nextBallType.radius);
-    }
-};
-
-const saveHighScore = (score) => {
-    highScores.push(score);
-    highScores.sort((a, b) => b - a); // スコアを降順にソート
-    highScores = highScores.slice(0, 10); // トップ10のスコアのみ保持
-    localStorage.setItem('highScores', JSON.stringify(highScores)); // ローカルストレージに保存
-    log('High scores saved:', highScores);
-};
-
-const drawGameOverScore = (ctx) => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // 画面をクリア
-    ctx.fillStyle = 'black'; // スコア表示用のスタイル設定
-    ctx.font = '48px sans-serif';
-    ctx.fillText('今回のスコア  ' + score.toFixed(5), 10, 100); // 今回のスコアを表示
-    drawRestartButton(ctx);
-};
-
-const drawRestartButton = (ctx) => {
-    const buttonWidth = 300;
-    const buttonHeight = 100;
-    const buttonX = (canvas.width - buttonWidth) / 2;
-    const buttonY = canvas.height - buttonHeight - 20;
-    
-    ctx.fillStyle = 'white';
-    ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
-    
-    ctx.fillStyle = 'black';
-    ctx.font = '36px sans-serif';
-    ctx.fillText('ゲームリスタート', buttonX + 20, buttonY + 60);
-    
-    canvas.addEventListener('click', function handleRestartClick(event) {
-        const rect = canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        
-        if (x >= buttonX && x <= buttonX + buttonWidth && y >= buttonY && y <= buttonY + buttonHeight) {
-            resetGame();
-            runner.enabled = true;
-            isGameOver = false;
-            requestAnimationFrame(mainLoop);
-            log('Game restarted');
-            canvas.removeEventListener('click', handleRestartClick);
-        }
-    });
-};
-
-const gameOver = () => {
-    if (isGameOver) return; // すでにゲームオーバーなら何もしない
-    isGameOver = true; // ゲームオーバー状態を設定
-    runner.enabled = false;
-    elapsedTime = Date.now() - startTime; // プレイ時間を計測
-
-    saveHighScore(score); // ハイスコアを保存
-
-    // 2秒後にスコアを表示
-    setTimeout(() => {
-        const ctx = canvas.getContext('2d');
-        drawGameOverScore(ctx);
-    }, 2000);
-
-    log('Game over');
-};
-
-const mainLoop = () => {
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (isGameOver) {
-        log('Main loop stopped'); // ループが停止したことをログに記録
-        return; // ゲームオーバー時にループを停止
-    }
-
-    drawBackground(ctx, backgroundImg);
-
-    // 座標変換のスケーリング係数を計算
-    const scaleX = canvas.width / MAX_SCREEN_WIDTH;
-    const scaleY = canvas.height / INIT_SCREEN_HEIGHT;
-
-    // ボールを描画
-    balls.forEach(ball => {
-        const posX = ball.position.x * scaleX;
-        const posY = ball.position.y * scaleY;
-        const radius = ball.circleRadius * scaleX; // スケールを適用
-        const img = ballImages[ball.circleRadius];
-        if (img) {
-            ctx.save();
-            ctx.translate(posX, posY);
-            ctx.rotate(ball.angle); // ボールの回転角度を適用
-            ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
-            ctx.restore();
-        }
-    });
-
-    // スコアを左上に描画
-    drawScore(ctx, score, 10, 15);
-
-    // プレイ時間を左上に描画（スコアの下）
-    const currentTime = Date.now();
-    const timeElapsed = currentTime - startTime;
-    drawTime(ctx, timeElapsed, 10, 60);
-
-    // スコアランキングをスコアと時間の下に描画
-    drawHighScores(ctx, highScores, 10, 90); // スコアランキングの表示位置を調整
-
-    // 次に出現するボールを描画
-    drawNextBall(ctx);
-
-    requestAnimationFrame(mainLoop);
-    log('Main loop running');
-};
-
 document.addEventListener('keydown', (event) => {
+    playBGM();
     if (event.code === 'Space') {
         resetGame();
         runner.enabled = true;
@@ -412,12 +290,193 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
+const drawScore = (ctx, score, x, y) => {
+    const scoreStr = score.toString();
+    for (let char of scoreStr) {
+        const digit = parseInt(char);
+        const img = scoreImages[digit];
+        if (img) {
+            ctx.drawImage(img, x, y, img.width, img.height);
+            x += img.width + 5;
+        }
+    }
+    log('Score drawn:', score);
+};
+
+const drawHighScores = (ctx, scores, x, y) => {
+    ctx.fillStyle = 'black';
+    ctx.font = '24px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('スコアランキング', x, y);
+    scores.slice(0, 3).forEach((score, index) => {
+        ctx.fillText(`${index + 1}. ${score.name}: ${score.score}`, x, y + 30 + index * 30);
+    });
+    log('High scores drawn:', scores);
+};
+
+const drawNextBall = (ctx) => {
+    if (ballImages[nextBallType.radius]) {
+        const radius = nextBallType.radius;
+        const x = canvas.width - radius;
+        const y = 100;
+        const img = ballImages[nextBallType.radius];
+        ctx.drawImage(img, x - radius, y - radius, radius * 2, radius * 2);
+        log('Next ball drawn:', nextBallType.radius);
+    }
+};
+
+const saveHighScore = (score) => {
+    highScores.push(score);
+    highScores.sort((a, b) => b - a);
+    highScores = highScores.slice(0, 10);
+    localStorage.setItem('highScores', JSON.stringify(highScores));
+    log('High scores saved:', highScores);
+};
+
+const drawRestartButtonArea = (ctx) => {
+    const areaHeight = 150;
+    const areaY = canvas.height - 200;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(0, areaY, canvas.width, areaHeight);
+    log('Restart area drawn');
+
+    canvas.addEventListener('click', handleRestartClick);
+};
+
+const handleRestartClick = (event) => {
+    if (!isGameOver) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const clickY = event.clientY - rect.top;
+    const areaHeight = 150;
+    const areaY = canvas.height - 200;
+
+    if (clickY >= areaY && clickY <= areaY + areaHeight) {
+        resetGame();
+        runner.enabled = true;
+        isGameOver = false;
+        requestAnimationFrame(mainLoop);
+        log('Game restarted by clicking restart area');
+        canvas.removeEventListener('click', handleRestartClick);
+    }
+};
+
+const drawFinalScore = (ctx, score) => {
+    const x = canvas.width / 2;
+    const y = canvas.height / 2;
+    const scoreStr = score.toString();
+    let totalWidth = 0;
+
+    // 各数字の幅を合計してスコア全体の幅を計算
+    for (let char of scoreStr) {
+        const digit = parseInt(char);
+        const img = scoreImages[digit];
+        if (img) {
+            totalWidth += img.width + 5; // 画像の幅と間隔を合計
+        }
+    }
+
+    let startX = x - totalWidth / 2; // 中央揃えのための開始位置
+
+    for (let char of scoreStr) {
+        const digit = parseInt(char);
+        const img = scoreImages[digit];
+        if (img) {
+            ctx.drawImage(img, startX, y - img.height / 2, img.width, img.height);
+            startX += img.width + 5; // 次の数字の位置を調整
+        }
+    }
+    log('Final score drawn:', score);
+};
+
+const fadeOutAudio = (audio, duration) => {
+    const step = audio.volume / (duration / 100);
+    const fade = setInterval(() => {
+        if (audio.volume > step) {
+            audio.volume -= step;
+        } else {
+            audio.volume = 0;
+            audio.pause();
+            clearInterval(fade);
+        }
+    }, 100);
+};
+
+const gameOver = () => {
+    if (isGameOver) return;
+    isGameOver = true;
+    runner.enabled = false;
+    elapsedTime = Date.now() - startTime;
+
+    const userName = prompt('Your name:');
+    if (userName) {
+        sendHighScore(userName, score);
+    }
+
+    saveHighScore(score);
+
+    const ctx = canvas.getContext('2d');
+    drawBackground(ctx, gameOverBackgroundImg); // まず背景を描画
+    drawRestartButtonArea(ctx); // リスタートボタンを描画
+
+    if (bgmAudio) {
+        fadeOutAudio(bgmAudio, 2000); // BGMを2秒でフェードアウト
+    }
+
+    log('Game over');
+};
+
+const mainLoop = () => {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    drawBackground(ctx, isGameOver ? gameOverBackgroundImg : backgroundImg);
+
+    if (!isGameOver) {
+        const scaleX = canvas.width / MAX_SCREEN_WIDTH;
+        const scaleY = canvas.height / INIT_SCREEN_HEIGHT;
+
+        balls.forEach(ball => {
+            const posX = ball.position.x * scaleX;
+            const posY = ball.position.y * scaleY;
+            const radius = ball.circleRadius * scaleX;
+            const img = ballImages[ball.circleRadius];
+            if (img) {
+                ctx.save();
+                ctx.translate(posX, posY);
+                ctx.rotate(ball.angle);
+                ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
+                ctx.restore();
+            }
+        });
+
+        drawScore(ctx, score, 10, 15);
+
+        const currentTime = Date.now();
+        const timeElapsed = currentTime - startTime;
+        drawTime(ctx, timeElapsed);
+
+        drawHighScores(ctx, highScores, 10, 70);
+
+        drawNextBall(ctx);
+
+        if (timeElapsed >= 60000) {
+            gameOver();
+        }
+    } else {
+        drawFinalScore(ctx, score); // ゲームオーバー時にスコアを描画
+    }
+
+    requestAnimationFrame(mainLoop);
+    log('Main loop running');
+};
+
 canvas.setAttribute('tabindex', 0);
 canvas.focus();
 
 Promise.all([
     loadImage('bg/0001.jpg').then(img => { backgroundImg = img; }),
-    loadImage('bg/0002.jpg').then(img => { gameOverBackgroundImg = img; }).catch(err => log(`Error loading game over background image: ${err.message}`)) // エラーハンドリングを追加
+    loadImage('bg/0002.jpg').then(img => { gameOverBackgroundImg = img; }).catch(err => log(`Error loading game over background image: ${err.message}`))
 ]).then(() => {
     return Promise.all(BALL_TYPES.map(type => loadImage(type.image)));
 }).then(images => {
@@ -425,9 +484,48 @@ Promise.all([
         ballImages[BALL_TYPES[index].radius] = img;
     });
     resetGame();
-    resizeCanvas(); // 初期のキャンバスサイズ設定を追加
-    requestAnimationFrame(mainLoop); // ゲームループの開始をここで行う
+    resizeCanvas();
+    requestAnimationFrame(mainLoop);
     log('Game started');
 }).catch(err => {
     log(`Error loading images: ${err.message}`);
 });
+
+const sendHighScore = (name, score) => {
+    fetch('https://nyandaru.onrender.com/api/highscores', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name, score })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('High scores:', data);
+        updateHighScoresDisplay(data);
+    })
+    .catch(error => {
+        console.error('Error sending high score:', error);
+    });
+};
+
+const fetchHighScores = () => {
+    fetch('https://nyandaru.onrender.com/api/highscores')
+    .then(response => response.json())
+    .then(data => {
+        highScores = data;
+        log('High scores fetched:', highScores);
+        updateHighScoresDisplay(highScores);
+    })
+    .catch(error => {
+        console.error('Error fetching high scores:', error);
+    });
+};
+
+const updateHighScoresDisplay = (scores) => {
+    const ctx = canvas.getContext('2d');
+    drawHighScores(ctx, scores, 10, 70);
+};
+
+// ゲーム開始時にハイスコアを取得
+window.addEventListener('load', fetchHighScores);

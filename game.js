@@ -510,22 +510,17 @@ const sendHighScore = (name, score) => {
 };
 
 const fetchHighScores = () => {
-    fetch('https://nyandaru.onrender.com/api/highscores')
-    .then(response => response.json())
-    .then(data => {
-        highScores = data;
-        log('High scores fetched:', highScores);
-        updateHighScoresDisplay(highScores);
-    })
-    .catch(error => {
-        console.error('Error fetching high scores:', error);
-    });
-};
+
 
 const updateHighScoresDisplay = (scores) => {
     const ctx = canvas.getContext('2d');
+    if (!Array.isArray(scores)) {
+        console.error('Scores is not an array:', scores);
+        return;
+    }
     drawHighScores(ctx, scores, 10, 70);
 };
+
 
 // ゲーム開始時にハイスコアを取得
 window.addEventListener('load', fetchHighScores);

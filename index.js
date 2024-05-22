@@ -29,7 +29,7 @@ app.get('/api/highscores', async (req, res) => {
         res.json(result.rows);
     } catch (error) {
         console.error('Error fetching high scores:', error);
-        res.status(500).json({ error: 'Failed to fetch high scores' });
+        res.status(500).json({ error: 'Failed to fetch high scores', details: error.message });
     }
 });
 
@@ -40,7 +40,7 @@ app.post('/api/highscores', async (req, res) => {
         res.status(201).json(result.rows[0]);
     } catch (error) {
         console.error('Error saving high score:', error);
-        res.status(500).json({ error: 'Failed to save high score' });
+        res.status(500).json({ error: 'Failed to save high score', details: error.message });
     }
 });
 
